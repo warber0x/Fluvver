@@ -165,7 +165,7 @@ def main():
             table.add_column("Dart SDK Version", style="dim", width=7, justify="center")
             table.add_column("Release Date", style="dim", width=28, justify="center")
             table.add_column("Archive", style="dim", width=48, justify="center")
-            table.add_column("SSL pinining bypass ?", style="dim", width=8, justify="center")
+            table.add_column("Possible SSL bypass ?", style="dim", width=8, justify="center")
 
             for index, release in enumerate(releases):
                 last_index = len(releases) - 1
@@ -185,3 +185,4 @@ def main():
         
 if __name__ == "__main__":
     main()
+
