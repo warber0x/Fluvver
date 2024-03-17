@@ -1,2 +1,35 @@
+
 # Fluvver
-Enables you to obtain information about the internal engines utilized in the Flutter APK.
+
+### Script Overview:
+
+The provided script facilitates the extraction of pertinent information regarding the SDK and flutter engine utilized within Flutter APKs.
+
+### Purpose:
+
+This script was developed in response to the challenges encountered while attempting to reverse-engineer a Flutter APK. The primary aim was to find the specific SDK and Flutter engine versions employed. Additionally, it was necessary to circumvent SSL and accommodate varying architectures. The key objective was to identify the version details and conduct reconnaissance effectively.
+
+### Utility:
+
+While this script is intended for integration into another project, it may also prove beneficial as a standalone tool for individuals seeking insights into Flutter APKs and getting more info about its internals.
+
+### Additional Features:
+
+- Detection of Boring SSL: The script can identify the presence of Boring SSL within the APK.
+- Detection of Non-Genuine Flutter APKs: Certain APKs may be tampered with, resulting in discrepancies between the snapshot_hash values in libapp.so and libflutter.so, compared to those utilized by the Dart SDK and Flutter Engine. The script can automatically detect such anomalies by identifying invalid hashes.
+
+## How to use
+
+```
+pip install -m requirements
+python detect_versions.py <Flutter APK File>
+```
+
+## Technical details
+- Extract the snapshot_hash from libapp.so and libflutter.so.
+- Extract the SHA hash in libflutter.so necessary to identify the engine release.
+- Detect the presence of Boring SSL.
+- Extract Dart SDK version.
+- Detect if libapp.so and libflutter.so are from the same APK and have not been tampered with.
+- Detect Dart version in offline mode; otherwise, retrieve it using online mode.
+- Retrieve all information from: https://storage.googleapis.com/flutter_infra_release/releases/releases_linux.json.
