@@ -97,7 +97,9 @@ def extract_info(apk_file):
     if not dart_version:
         dart_version, revision = get_online_dart_version(zip_file_url.format(valid_hash), start_byte, end_byte)
 
-    return dart_version, revision
+    can_by_bypassed = is_boring_ssl_used(lib_contents.get('libflutter.so'))
+
+    return dart_version, revision, can_by_bypassed
 
 def get_offline_dart_version(libflutter_data):
     index = libflutter_data.find(b'(stable)')
@@ -143,25 +145,6 @@ def get_all_infos(url, dart_version):
     else:
         print("No items found matching the criteria.")
 
-def draw_output_table(json_data):
-    table = Table(show_header=True, header_style="bold blue", box=box.ROUNDED)
-    
-    table.add_column("Engine Version", style="dim", width=8, justify="center")
-    table.add_column("Dart SDK Version", style="dim", width=8, justify="center")
-    table.add_column("Release Date", style="dim", width=30, justify="center")
-    table.add_column("Archive", style="dim", width=50, justify="center")
-
-    # Add data to the table
-    for release in json_data:
-        table.add_row(
-            release["version"],
-            release.get("dart_sdk_version", ""),
-            release["release_date"],
-            release["archive"],
-        )
-
-    return table
-
 def main():
     title()
 
@@ -173,15 +156,32 @@ def main():
     if args.apk_file is not None:
         result = extract_info(args.apk_file)
         if result is not None:
-            dart_version, commit_id = result
+            dart_version, commit_id, can_be_bypassed = result
             releases = get_all_infos(flutter_releases_url, dart_version)
             console = Console()
-            console.print(draw_output_table(releases))
+            table = Table(show_header=True, header_style="bold blue", box=box.ROUNDED)
+    
+            table.add_column("Engine Version", style="dim", width=7, justify="center")
+            table.add_column("Dart SDK Version", style="dim", width=7, justify="center")
+            table.add_column("Release Date", style="dim", width=28, justify="center")
+            table.add_column("Archive", style="dim", width=48, justify="center")
+            table.add_column("SSL pinining bypass ?", style="dim", width=8, justify="center")
+
+            for index, release in enumerate(releases):
+                last_index = len(releases) - 1
+                is_last_element = index == last_index
+
+                table.add_row(
+                    release["version"],
+                    release.get("dart_sdk_version", ""),
+                    release["release_date"],
+                    release["archive"],
+                    str(can_be_bypassed) if is_last_element else "",
+                )
+            console.print(table)
 
     else:
         print("No APK file provided.")
         
 if __name__ == "__main__":
     main()
-
-
