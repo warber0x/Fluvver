@@ -13,10 +13,7 @@ This script was developed in response to the challenges encountered while attemp
 
 While this script is intended for integration into another project, it may also prove beneficial as a standalone tool for individuals seeking insights into Flutter APKs and getting more info about its internals.
 
-### Additional Features:
 
-- Detection of Boring SSL: The script can identify the presence of Boring SSL within the APK.
-- Detection of Non-Genuine Flutter APKs: Certain APKs may be tampered with, resulting in discrepancies between the snapshot_hash values in libapp.so and libflutter.so, compared to those utilized by the Dart SDK and Flutter Engine. The script can automatically detect such anomalies by identifying invalid hashes.
 
 ## How to use
 
@@ -33,3 +30,9 @@ python detect_versions.py <Flutter APK File>
 - Detect if libapp.so and libflutter.so are from the same APK and have not been tampered with.
 - Detect Dart version in offline mode; otherwise, retrieve it using online mode.
 - Retrieve all information from: https://storage.googleapis.com/flutter_infra_release/releases/releases_linux.json.
+
+## Additional Features:
+
+- Detection of Boring SSL: The script can identify the presence of Boring SSL within the APK. To bypass ssl pinning, boring ssl is the one to patch. So, the script detect the presence in the binary if it's used.
+- Detection of Non-Genuine Flutter APKs: Certain APKs may be tampered with, resulting in discrepancies between the snapshot_hash values in libapp.so and libflutter.so, compared to those utilized by the Dart SDK and Flutter Engine. The script can automatically detect such anomalies by identifying invalid hashes.
+
