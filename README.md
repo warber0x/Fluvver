@@ -19,7 +19,7 @@ While this script is intended for integration into another project, it may also 
 ## How to use
 
 ```
-pip install -m requirements
+pip install -m requirements.txt
 python detect_versions.py <Flutter APK File>
 ```
 
