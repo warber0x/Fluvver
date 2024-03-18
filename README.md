@@ -35,3 +35,6 @@ python detect_versions.py <Flutter APK File>
 - Detection of Boring SSL: The script can identify the presence of Boring SSL within the APK.
 - Detection of Non-Genuine Flutter APKs: Certain APKs may be tampered with, resulting in a differences between the snapshot_hash values in libapp.so and libflutter.so, compared to those utilized by the Dart SDK and Flutter Engine. The script can automatically detect such anomalies by identifying invalid hashes.
 
+## License
+
+[MIT](LICENSE.md) © [warber0x](https://https://github.com/warber0x)
