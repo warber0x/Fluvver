@@ -37,4 +37,4 @@ python detect_versions.py <Flutter APK File>
 
 ## License
 
-[MIT](LICENSE.md) © [warber0x](https://https://github.com/warber0x)
+[MIT](LICENSE.md)
