@@ -1,6 +1,6 @@
 # Fluvver
 
-![image](https://github.com/warber0x/Fluvver/assets/7810067/917ce9e2-85b2-4003-bad8-c2c897443a26)
+![image](https://github.com/warber0x/Fluvver/assets/7810067/233028a4-a08a-451f-8789-a578aa338932)
 
 ### Script Overview:
 
