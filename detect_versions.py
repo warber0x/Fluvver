@@ -93,23 +93,34 @@ def extract_info(apk_file):
         return None
 
     dart_version = get_offline_dart_version(lib_contents.get('libflutter.so'))
-    revision = ''
-    if not dart_version:
-        dart_version, revision = get_online_dart_version(zip_file_url.format(valid_hash), start_byte, end_byte)
+    if dart_version:
+        dart_revision = get_online_dart_version(zip_file_url.format(valid_hash), start_byte, end_byte, file_type='rev')
+    else:
+        dart_version, dart_revision = get_online_dart_version(zip_file_url.format(valid_hash), start_byte, end_byte, file_type='all')
 
     can_by_bypassed = is_boring_ssl_used(lib_contents.get('libflutter.so'))
 
-    return dart_version, revision, can_by_bypassed
+    return dart_version.decode('utf-8'), dart_revision.decode('utf-8'), app_snapshot_hash[0].decode('utf-8'), can_by_bypassed
 
 def get_offline_dart_version(libflutter_data):
     index = libflutter_data.find(b'(stable)')
 
     if index and index != -1:
         dart_version = re.sub(b'[^0-9.]', b'', libflutter_data[index-10:index])
-        return dart_version.decode('utf-8')
+        return dart_version
     return None
 
-def get_online_dart_version(url, start_byte, end_byte):
+def get_online_dart_version(url, start_byte, end_byte, file_type='all'):
+
+    dart_version = None
+    dart_revision = None
+
+    search_options = {
+        'all': [b'revision', b'version'],
+        'rev': [b'revision'],
+        'ver': [b'version']
+    }
+
     headers = {"Range": f"bytes={start_byte}-{end_byte}"}
     with requests.get(url, headers=headers, stream=True) as r:
         if "20" in str(r.status_code):  # Partial Content
@@ -125,20 +136,28 @@ def get_online_dart_version(url, start_byte, end_byte):
             zip_data.seek(extraLen, io.SEEK_CUR)
 
         data = zip_data.read(compSize)
-        if b'revision' in filename:
-            filename = filename.strip()
-            dart_revision = zlib.decompress(data, wbits=-zlib.MAX_WBITS).strip() # -zlib.MAX_WBITS => Automatic detection
-        elif b'version' in filename:
-            filename = filename.strip()
-            dart_version = zlib.decompress(data, wbits=-zlib.MAX_WBITS).strip() # -zlib.MAX_WBITS => Automatic detection
 
-    return dart_version.decode('utf-8'), dart_revision.decode('utf-8')
+        for option in search_options.get(file_type, []):
+            if option in filename:
+                filename = filename.strip()
+                if option == b'revision' and file_type in ['all','rev']:
+                    dart_revision = zlib.decompress(data, wbits=-zlib.MAX_WBITS).strip() # -zlib.MAX_WBITS => Automatic detection
+                    if file_type == 'rev':
+                        return dart_revision
+                elif option == b'version' and file_type in ['all','ver']:
+                    dart_version = zlib.decompress(data, wbits=-zlib.MAX_WBITS).strip() # -zlib.MAX_WBITS => Automatic detection
+                    if file_type == 'ver':
+                        return dart_version
+
+        if file_type == 'all' and dart_version is not None and dart_revision is not None:
+            return dart_version, dart_revision
+
+    return None
 
 def get_all_infos(url, dart_version):
     json_response = requests.get(url)
     if json_response.status_code == 200:
         json_data = json_response.json()
-
         filtered_releases = [release for release in json_data['releases'] if release['channel'] == 'stable' and dart_version in release.get('dart_sdk_version', '')]
         if filtered_releases:
             return filtered_releases
@@ -156,7 +175,7 @@ def main():
     if args.apk_file is not None:
         result = extract_info(args.apk_file)
         if result is not None:
-            dart_version, commit_id, can_be_bypassed = result
+            dart_version, commit_id, snapshot_hash, can_be_bypassed = result
             releases = get_all_infos(flutter_releases_url, dart_version)
             console = Console()
             table = Table(show_header=True, header_style="bold blue", box=box.ROUNDED)
@@ -180,9 +199,14 @@ def main():
                 )
             console.print(table)
 
+            table = Table(show_header=True, header_style="bold blue", box=box.ROUNDED)
+            table.add_column("Snapshot Hash", style="dim", width=33, justify="center")
+            table.add_column("Engine SHA commit", style="dim", width=45, justify="center")
+            table.add_row(snapshot_hash, commit_id)
+            console.print(table)
+
     else:
         print("No APK file provided.")
         
 if __name__ == "__main__":
     main()
-
