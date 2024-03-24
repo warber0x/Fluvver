@@ -1,6 +1,6 @@
 # Fluvver
 
-![image](https://github.com/warber0x/Fluvver/assets/7810067/233028a4-a08a-451f-8789-a578aa338932)
+![image](https://github.com/warber0x/Fluvver/assets/7810067/68defe8f-2af8-45ad-8077-ca4f49fa0597)
 
 ### Script Overview:
 
@@ -39,7 +39,7 @@ Bypass it by adding the `--without-libapp` argument.
 - Detection of Boring SSL: The script can identify the presence of Boring SSL within the APK.
 
 ## To Do:
-- [ ] Check the architectures supported.
+- [x] Check supported CPUs.
 - [ ] Suuport IPA apps. 
 - [x] Bypass libapp.so check
 
