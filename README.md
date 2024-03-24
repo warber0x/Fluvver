@@ -18,8 +18,9 @@ While this script is intended for integration into another project, it may also 
 
 ```
 pip install -r requirements.txt
-python detect_versions.py <Flutter APK File>
+python detect_versions.py <Flutter APK File> [--without-libapp]
 ```
+Some APKs are without `lipapp.so`. You can execute the program by ignoring it adding `--without-libapp` argument to the command.
 
 ## Technical details
 - Extract the snapshot_hash from libapp.so and libflutter.so.
