@@ -74,9 +74,7 @@ def extract_libflutter_hashes(file_data):
 def extract_info(apk_file, is_without_libapp=False):
     start_byte = 0 
     end_byte = 4096 
-    pattern = r'(\d+\.\d+\.\d+)'
     lib_files = ['libapp.so', 'libflutter.so']
-    
 
     lib_contents = extract_libs_from_apk(apk_file, lib_files)
 
@@ -114,9 +112,8 @@ def extract_info(apk_file, is_without_libapp=False):
     else:
         dart_version, dart_revision = get_online_dart_version(zip_file_url.format(valid_hash), start_byte, end_byte, file_type='all')
 
-    match = re.search(pattern, dart_version.decode('utf-8'))
-    if match:
-        dart_version = match.group(1)
+    if isinstance(dart_version, bytes):
+        dart_version = dart_version.decode('utf-8')
 
     can_by_bypassed = is_boring_ssl_used(lib_contents.get('libflutter.so'))
 
@@ -127,9 +124,12 @@ def extract_info(apk_file, is_without_libapp=False):
 
 def get_offline_dart_version(libflutter_data):
     index = libflutter_data.find(b'(stable)')
-
     if index and index != -1:
         dart_version = re.sub(b'[^0-9.]', b'', libflutter_data[index-10:index])
+        pattern = r'\b0*(\d+\.\d+\.\d+)\b'
+        match = re.search(pattern, dart_version.decode('utf-8'))
+        if match:
+            dart_version = match.group(1)
         return dart_version
     return None
 
@@ -177,23 +177,16 @@ def get_online_dart_version(url, start_byte, end_byte, file_type='all'):
 
     return None
 
-def get_all_infos(url, dart_version):
+def get_all_infos(url, dart_version, channel="stable"):
     json_response = requests.get(url)
     if json_response.status_code == 200:
         json_data = json_response.json()
         filtered_releases = [
             release for release in json_data['releases'] 
-            if release['channel'] == 'stable' and 
-                dart_version in release.get('dart_sdk_version', '') or 
-                dart_version in release['version']
+            if release['channel'] == channel and 
+                (dart_version in release.get('dart_sdk_version', '') or 
+                dart_version in release['version'])
             ]
-        if not filtered_releases:
-            filtered_releases = [
-                release for release in json_data['releases'] 
-                if release['channel'] == 'beta' and 
-                    dart_version in release.get('dart_sdk_version', '') or 
-                    dart_version in release['version']
-                ]
         return filtered_releases
     else:
         print("No items found matching the criteria.")
@@ -214,6 +207,8 @@ def main():
         if result is not None:
             dart_version, commit_id, snapshot_hash, can_be_bypassed = result
             releases = get_all_infos(flutter_releases_url, dart_version)
+            if not releases:
+                releases = get_all_infos(flutter_releases_url, dart_version, channel="beta")
 
             console = Console()
             table = Table(show_header=True, header_style="bold blue", box=box.ROUNDED)
@@ -225,18 +220,27 @@ def main():
             table.add_column("Possible SSL bypass ?", style="dim", width=8, justify="left")
 
             pattern = r'(\d+\.\d+\.\d+)'
-            for release in releases:
-                match = re.search(pattern, release["version"])
-                if match:
-                    engine_version = match.group(1)
+            if releases:
+                for release in releases:
+                    match = re.search(pattern, release["version"])
+                    if match:
+                        engine_version = match.group(1)
 
+                    table.add_row(
+                        engine_version,
+                        dart_version,
+                        release["channel"],
+                        release["archive"],
+                        can_be_bypassed,
+                    )
+            else:
                 table.add_row(
-                    engine_version,
-                    release.get("dart_sdk_version", "Unknown"),
-                    release["channel"],
-                    release["archive"],
-                    can_be_bypassed,
-                )
+                        'Unknown',
+                        dart_version,
+                        'Unknown',
+                        'Unknown',
+                        can_be_bypassed,
+                    )
             console.print(table)
 
             table = Table(show_header=True, header_style="bold blue", box=box.ROUNDED)
