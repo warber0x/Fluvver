@@ -20,7 +20,13 @@ While this script is intended for integration into another project, it may also 
 pip install -r requirements.txt
 python detect_versions.py <Flutter APK File> [--without-libapp]
 ```
-Some APKs are without `lipapp.so`. You can execute the program by ignoring it adding `--without-libapp` argument to the command.
+
+## Exceptions:
+Some APKs do not contain `libapp.so` and you will have this error:
+
+![image](https://github.com/warber0x/Fluvver/assets/7810067/44eb3ab3-6e9f-45bc-9b54-015c78a43056)
+
+You can ignore it by adding the `--without-libapp` argument.
 
 ## Technical details
 - Extract the snapshot_hash from libapp.so and libflutter.so.
