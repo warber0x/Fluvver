@@ -4,7 +4,7 @@
 
 ### Script Overview:
 
-The provided script facilitates the extraction of pertinent information regarding the SDK and flutter engine utilized within Flutter APKs.
+The provided script facilitates the extraction of pertinent information regarding the SDK and flutter engine utilized within Flutter APKs. Doesn't support IPA apps for now.
 
 ### Purpose:
 
