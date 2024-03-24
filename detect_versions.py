@@ -5,18 +5,13 @@ import zlib
 import re
 import zipfile
 import argparse
+import os
 
 from rich.console import Console
 from rich.table import Table
 from rich import box
-from rich.text import Text
 
-start_byte = 0  # Replace with the starting byte of the range you want
-end_byte = 4096 
-lib_files = ['libapp.so', 'libflutter.so']
-lib_folders = ['arm64-v8a','armeabi-v7a','x86_64']
 zip_file_url = "https://storage.googleapis.com/flutter_infra_release/flutter/{}/dart-sdk-windows-x64.zip"
-flutter_releases_url = "https://storage.googleapis.com/flutter_infra_release/releases/releases_linux.json"
 
 def title():
     print("""
@@ -28,29 +23,33 @@ def title():
 By TheRed0ne 2024 - Https://thered0ne.com                           
     """)
 
-def extract_libs_from_apk(apk_file_path, folder_names):
-    lib_contents = {}
-    lib_files_to_extract = {'libflutter.so', 'libapp.so'}
-    
+def extract_libs_from_apk(apk_file_path, lib_files):
+    lib_contents = {}    
     with zipfile.ZipFile(apk_file_path, 'r') as apk_file:
         for file_info in apk_file.infolist():
-            for folder_name in folder_names:
-                if folder_name in file_info.filename:
-                    for lib_file in lib_files_to_extract:
-                        if lib_file in file_info.filename:
-                            with apk_file.open(file_info) as file:
-                                lib_contents[lib_file] = file.read()
-                                lib_files_to_extract.remove(lib_file)  # Remove file from set
-                                break
-                    if not lib_files_to_extract:  # Break out of outer loop if all files are extracted
+            for lib_file in lib_files:
+                if lib_file in file_info.filename:
+                    with apk_file.open(file_info) as file:
+                        lib_contents[lib_file] = file.read()
+                        lib_files.remove(lib_file)  # Remove file from set
                         break
-            if not lib_files_to_extract:  # Break out of outer loop if all files are extracted
+            if not lib_files:
                 break
 
     return lib_contents
 
+def get_arch(apk_file_path):
+    arch_folders = ['armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64']
+    arch_list = []
+    with zipfile.ZipFile(apk_file_path, 'r') as apk_file:
+        file_list = apk_file.namelist()
+        lib_directories = set(os.path.dirname(file) for file in file_list if file.startswith('lib/'))
+        for arch in arch_folders:
+            if any(arch in directory for directory in lib_directories):
+                arch_list.append(arch)
+    return arch_list
+
 def check_urls(engine_hashes):
-    global zip_file_url
     for engine_hash in engine_hashes:
         response = requests.head(zip_file_url.format(engine_hash.decode('utf-8')))
         if response.status_code == 200:
@@ -74,8 +73,14 @@ def extract_libflutter_hashes(file_data):
         return engine_sha_hashes, snapshot_hashes
 
 def extract_info(apk_file, is_without_libapp=False):
+    start_byte = 0 
+    end_byte = 4096 
     pattern = r'(\d+\.\d+\.\d+)'
+    lib_files = ['libapp.so', 'libflutter.so']
+    
+
     lib_contents = extract_libs_from_apk(apk_file, lib_files)
+
     if not lib_contents:
         print("[Error] No libraries found")
         return None
@@ -185,13 +190,14 @@ def get_all_infos(url, dart_version):
         print("No items found matching the criteria.")
 
 def main():
-    title()
+    flutter_releases_url = "https://storage.googleapis.com/flutter_infra_release/releases/releases_linux.json"
 
     parser = argparse.ArgumentParser(description="Process an APK file.")
     parser.add_argument("apk_file", help="Path to the APK file to process")
     parser.add_argument('--without-libapp', action='store_true', help="Exclude libapp.so")
-
     args = parser.parse_args()
+
+    title()
 
     if args.apk_file is not None:
         result = extract_info(args.apk_file, args.without_libapp)
@@ -202,11 +208,11 @@ def main():
             console = Console()
             table = Table(show_header=True, header_style="bold blue", box=box.ROUNDED)
     
-            table.add_column("Engine Version", style="dim", width=7, justify="center")
-            table.add_column("Dart SDK Version", style="dim", width=20, justify="center")
-            table.add_column("Channel", style="dim", width=7, justify="center")
-            table.add_column("Archive", style="dim", width=55, justify="center")
-            table.add_column("Possible SSL bypass ?", style="dim", width=8, justify="center")
+            table.add_column("Engine Version", style="dim", width=7, justify="left")
+            table.add_column("Dart SDK Version", style="dim", width=20, justify="left")
+            table.add_column("Channel", style="dim", width=7, justify="left")
+            table.add_column("Archive", style="dim", width=55, justify="left")
+            table.add_column("Possible SSL bypass ?", style="dim", width=8, justify="left")
 
             for index, release in enumerate(releases):
                 last_index = len(releases) - 1
@@ -222,13 +228,19 @@ def main():
             console.print(table)
 
             table = Table(show_header=True, header_style="bold blue", box=box.ROUNDED)
-            table.add_column("Snapshot Hash", style="dim", width=40, justify="center")
+            table.add_column("Snapshot Hash", style="dim", width=40, justify="left")
             if not args.without_libapp:
-                table.add_column("Engine SHA commit", style="dim", width=45, justify="center")
+                table.add_column("Engine SHA commit", style="dim", width=45, justify="left")
                 table.add_row(snapshot_hash, commit_id)
             else:
                 table.add_row(commit_id)
             console.print(table)
+
+            table = Table(show_header=True, header_style="bold blue", box=box.ROUNDED)
+            table.add_column("Supported CPUs", style="dim", width=20, justify="left")
+            table.add_row(", ".join(get_arch(args.apk_file)))
+            console.print(table)
+
 
     else:
         print("No APK file provided.")
