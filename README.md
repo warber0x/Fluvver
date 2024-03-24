@@ -28,6 +28,8 @@ Some apps do not contain `libapp.so`. If you get this error:
 
 Bypass it by adding the `--without-libapp` argument.
 
+Sometimes, the Engine version is unknown because it's not available in the release notes. In such cases, only the Dart SDK version is shown if found.
+  
 ## Technical details
 - Extract the snapshot_hash from libapp.so and libflutter.so.
 - Extract the SHA hash in libflutter.so necessary to identify the engine release.
@@ -42,6 +44,7 @@ Bypass it by adding the `--without-libapp` argument.
 - [x] Check supported CPUs.
 - [ ] Suuport IPA apps. 
 - [x] Bypass libapp.so check
+- [x] Detect old versions 
 
 ## Requirements:
 - Rich
