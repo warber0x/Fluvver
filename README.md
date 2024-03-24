@@ -4,11 +4,11 @@
 
 ### Script Overview:
 
-The provided script facilitates the extraction of pertinent information regarding the SDK and flutter engine utilized within Flutter APKs. Doesn't support IPA apps for now.
+The provided script facilitates the extraction of pertinent information regarding the SDK and flutter engine utilized within Flutter mobile apps.
 
 ### Purpose:
 
-This script was developed in response to the challenges encountered while attempting to reverse-engineer a Flutter APK. The primary aim was to find the specific SDK and Flutter engine versions employed. Additionally, it was necessary to circumvent SSL and accommodate varying architectures. The key objective was to identify the version details and conduct reconnaissance effectively.
+This script was developed in response to the challenges encountered while attempting to reverse-engineer a Flutter mobile app. The primary aim was to find the specific SDK and Flutter engine versions employed. Additionally, it was necessary to circumvent SSL and accommodate varying architectures. The key objective was to identify the version details and conduct reconnaissance effectively.
 
 ### Utility:
 
@@ -18,15 +18,15 @@ While this script is intended for integration into another project, it may also 
 
 ```
 pip install -r requirements.txt
-python detect_versions.py <Flutter APK File> [--without-libapp]
+python detect_versions.py <Flutter_mobile_app_file> [--without-libapp]
 ```
 
 ## Exceptions:
-Some APKs do not contain `libapp.so` and you will have this error:
+Some apps do not contain `libapp.so`. If you get this error:
 
 ![image](https://github.com/warber0x/Fluvver/assets/7810067/44eb3ab3-6e9f-45bc-9b54-015c78a43056)
 
-You can ignore it by adding the `--without-libapp` argument.
+Bypass it by adding the `--without-libapp` argument.
 
 ## Technical details
 - Extract the snapshot_hash from libapp.so and libflutter.so.
@@ -36,9 +36,12 @@ You can ignore it by adding the `--without-libapp` argument.
 - Detect Dart version in offline mode; otherwise, retrieve it using online mode.
 
 ## Additional Features:
-
 - Detection of Boring SSL: The script can identify the presence of Boring SSL within the APK.
-- Detection of Non-Genuine Flutter APKs: Certain APKs may be tampered with, resulting in a differences between the snapshot_hash values in libapp.so and libflutter.so, compared to those utilized by the Dart SDK and Flutter Engine. The script can automatically detect such anomalies by identifying invalid hashes.
+
+## To Do:
+- [ ] Check the architectures supported.
+- [ ] Suuport IPA apps. 
+- [x] Bypass libapp.so check
 
 ## Requirements:
 - Rich
