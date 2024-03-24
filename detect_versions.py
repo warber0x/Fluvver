@@ -61,8 +61,8 @@ def is_boring_ssl_used(file_data):
     data = file_data
     match = re.findall(b'x509\.cc\x00', data)
     if match:
-        return True
-    return False
+        return "Yes"
+    return "No"
 
 def extract_libapp_hashes(file_data):
     app_snapshot_hashes = re.findall(b'\x00([a-fA-F\d]{32})', file_data)
@@ -73,21 +73,33 @@ def extract_libflutter_hashes(file_data):
         snapshot_hashes = re.findall(b'\x00([a-fA-F\d]{32})\x00', file_data)
         return engine_sha_hashes, snapshot_hashes
 
-def extract_info(apk_file):
+def extract_info(apk_file, is_without_libapp=False):
+    pattern = r'(\d+\.\d+\.\d+)'
     lib_contents = extract_libs_from_apk(apk_file, lib_files)
     if not lib_contents:
         print("[Error] No libraries found")
         return None
+    
+    if is_without_libapp == False:
+        if 'libapp.so' not in lib_contents:
+            print("[Error] Is there lipapp.so in you APK ? try --without-libapp argument")
+            return None
         
-    app_snapshot_hash = extract_libapp_hashes(lib_contents.get('libapp.so'))
+        app_snapshot_hash = extract_libapp_hashes(lib_contents.get('libapp.so'))
+        if not app_snapshot_hash:
+            print("[Error] No hash found in libapp !")
+            return None
+    
     engine_sha_hashes, libflutter_snapshot_hash = extract_libflutter_hashes(lib_contents.get('libflutter.so'))
-
-    if app_snapshot_hash[0] != libflutter_snapshot_hash[0]:
-        print("[Info] The libapp and libflutter are not from the same app. The engine version could not be correct !")
+    if not engine_sha_hashes:
+        print("[Error] No hash found in libflutter.so!")
         return None
+    
+    if is_without_libapp == False:
+        if app_snapshot_hash[0] != libflutter_snapshot_hash[0]:
+            print("[Info] The libapp and libflutter are not from the same app. The engine version could not be correct !")
         
     valid_hash = check_urls(engine_sha_hashes)
-
     if valid_hash is None:
         print("[Info] This APK maybe was patched ! no valid hash found")
         return None
@@ -98,9 +110,16 @@ def extract_info(apk_file):
     else:
         dart_version, dart_revision = get_online_dart_version(zip_file_url.format(valid_hash), start_byte, end_byte, file_type='all')
 
+    match = re.search(pattern, dart_version.decode('utf-8'))
+    if match:
+        dart_version = match.group(1)
+
     can_by_bypassed = is_boring_ssl_used(lib_contents.get('libflutter.so'))
 
-    return dart_version.decode('utf-8'), dart_revision.decode('utf-8'), app_snapshot_hash[0].decode('utf-8'), can_by_bypassed
+    if is_without_libapp == False:
+        return dart_version, dart_revision.decode('utf-8'), app_snapshot_hash[0].decode('utf-8'), can_by_bypassed
+    else:
+        return dart_version, dart_revision.decode('utf-8'), None, can_by_bypassed
 
 def get_offline_dart_version(libflutter_data):
     index = libflutter_data.find(b'(stable)')
@@ -159,8 +178,9 @@ def get_all_infos(url, dart_version):
     if json_response.status_code == 200:
         json_data = json_response.json()
         filtered_releases = [release for release in json_data['releases'] if release['channel'] == 'stable' and dart_version in release.get('dart_sdk_version', '')]
-        if filtered_releases:
-            return filtered_releases
+        if not filtered_releases:
+            filtered_releases = [release for release in json_data['releases'] if release['channel'] == 'beta' and dart_version in release.get('dart_sdk_version', '')]
+        return filtered_releases
     else:
         print("No items found matching the criteria.")
 
@@ -169,11 +189,13 @@ def main():
 
     parser = argparse.ArgumentParser(description="Process an APK file.")
     parser.add_argument("apk_file", help="Path to the APK file to process")
+    parser.add_argument('--without-libapp', action='store_true', help="Exclude libapp.so")
 
     args = parser.parse_args()
 
     if args.apk_file is not None:
-        result = extract_info(args.apk_file)
+        result = extract_info(args.apk_file, args.without_libapp)
+
         if result is not None:
             dart_version, commit_id, snapshot_hash, can_be_bypassed = result
             releases = get_all_infos(flutter_releases_url, dart_version)
@@ -181,9 +203,9 @@ def main():
             table = Table(show_header=True, header_style="bold blue", box=box.ROUNDED)
     
             table.add_column("Engine Version", style="dim", width=7, justify="center")
-            table.add_column("Dart SDK Version", style="dim", width=7, justify="center")
-            table.add_column("Release Date", style="dim", width=28, justify="center")
-            table.add_column("Archive", style="dim", width=48, justify="center")
+            table.add_column("Dart SDK Version", style="dim", width=20, justify="center")
+            table.add_column("Channel", style="dim", width=7, justify="center")
+            table.add_column("Archive", style="dim", width=55, justify="center")
             table.add_column("Possible SSL bypass ?", style="dim", width=8, justify="center")
 
             for index, release in enumerate(releases):
@@ -193,14 +215,14 @@ def main():
                 table.add_row(
                     release["version"],
                     release.get("dart_sdk_version", ""),
-                    release["release_date"],
+                    release["channel"],
                     release["archive"],
-                    str(can_be_bypassed) if is_last_element else "",
+                    can_be_bypassed,
                 )
             console.print(table)
 
             table = Table(show_header=True, header_style="bold blue", box=box.ROUNDED)
-            table.add_column("Snapshot Hash", style="dim", width=33, justify="center")
+            table.add_column("Snapshot Hash", style="dim", width=40, justify="center")
             table.add_column("Engine SHA commit", style="dim", width=45, justify="center")
             table.add_row(snapshot_hash, commit_id)
             console.print(table)
