@@ -223,8 +223,11 @@ def main():
 
             table = Table(show_header=True, header_style="bold blue", box=box.ROUNDED)
             table.add_column("Snapshot Hash", style="dim", width=40, justify="center")
-            table.add_column("Engine SHA commit", style="dim", width=45, justify="center")
-            table.add_row(snapshot_hash, commit_id)
+            if not args.without_libapp:
+                table.add_column("Engine SHA commit", style="dim", width=45, justify="center")
+                table.add_row(snapshot_hash, commit_id)
+            else:
+                table.add_row(commit_id)
             console.print(table)
 
     else:
