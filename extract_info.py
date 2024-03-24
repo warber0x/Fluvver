@@ -31,8 +31,7 @@ def extract_libs_from_apk(apk_file_path, lib_files):
                 if lib_file in file_info.filename:
                     with apk_file.open(file_info) as file:
                         lib_contents[lib_file] = file.read()
-                        lib_files.remove(lib_file)  # Remove file from set
-                        break
+                        lib_files.remove(lib_file)
             if not lib_files:
                 break
 
@@ -106,7 +105,7 @@ def extract_info(apk_file, is_without_libapp=False):
         
     valid_hash = check_urls(engine_sha_hashes)
     if valid_hash is None:
-        print("[Info] This APK maybe was patched ! no valid hash found")
+        print("[Info] This APK maybe was modified ! no valid hash found")
         return None
 
     dart_version = get_offline_dart_version(lib_contents.get('libflutter.so'))
@@ -173,7 +172,7 @@ def get_online_dart_version(url, start_byte, end_byte, file_type='all'):
                     if file_type == 'ver':
                         return dart_version
 
-        if file_type == 'all' and dart_version is not None and dart_revision is not None:
+        if file_type == 'all' and dart_version and dart_revision:
             return dart_version, dart_revision
 
     return None
@@ -182,9 +181,19 @@ def get_all_infos(url, dart_version):
     json_response = requests.get(url)
     if json_response.status_code == 200:
         json_data = json_response.json()
-        filtered_releases = [release for release in json_data['releases'] if release['channel'] == 'stable' and dart_version in release.get('dart_sdk_version', '')]
+        filtered_releases = [
+            release for release in json_data['releases'] 
+            if release['channel'] == 'stable' and 
+                dart_version in release.get('dart_sdk_version', '') or 
+                dart_version in release['version']
+            ]
         if not filtered_releases:
-            filtered_releases = [release for release in json_data['releases'] if release['channel'] == 'beta' and dart_version in release.get('dart_sdk_version', '')]
+            filtered_releases = [
+                release for release in json_data['releases'] 
+                if release['channel'] == 'beta' and 
+                    dart_version in release.get('dart_sdk_version', '') or 
+                    dart_version in release['version']
+                ]
         return filtered_releases
     else:
         print("No items found matching the criteria.")
@@ -205,22 +214,25 @@ def main():
         if result is not None:
             dart_version, commit_id, snapshot_hash, can_be_bypassed = result
             releases = get_all_infos(flutter_releases_url, dart_version)
+
             console = Console()
             table = Table(show_header=True, header_style="bold blue", box=box.ROUNDED)
     
-            table.add_column("Engine Version", style="dim", width=7, justify="left")
+            table.add_column("Engine Versions", style="dim", width=7, justify="left")
             table.add_column("Dart SDK Version", style="dim", width=20, justify="left")
             table.add_column("Channel", style="dim", width=7, justify="left")
             table.add_column("Archive", style="dim", width=55, justify="left")
             table.add_column("Possible SSL bypass ?", style="dim", width=8, justify="left")
 
-            for index, release in enumerate(releases):
-                last_index = len(releases) - 1
-                is_last_element = index == last_index
+            pattern = r'(\d+\.\d+\.\d+)'
+            for release in releases:
+                match = re.search(pattern, release["version"])
+                if match:
+                    engine_version = match.group(1)
 
                 table.add_row(
-                    release["version"],
-                    release.get("dart_sdk_version", ""),
+                    engine_version,
+                    release.get("dart_sdk_version", "Unknown"),
                     release["channel"],
                     release["archive"],
                     can_be_bypassed,
@@ -240,8 +252,6 @@ def main():
             table.add_column("Supported CPUs", style="dim", width=20, justify="left")
             table.add_row(", ".join(get_arch(args.apk_file)))
             console.print(table)
-
-
     else:
         print("No APK file provided.")
         
